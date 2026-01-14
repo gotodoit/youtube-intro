@@ -12,7 +12,44 @@ class YouTubeService:
             'skip_download': True, # We only need metadata and subtitles for now
             'quiet': True,
             'no_warnings': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         }
+        
+        # Check for cookies.txt in current directory or backend directory
+        cookie_file = "cookies.txt"
+        if not os.path.exists(cookie_file):
+            # Try looking in backend folder if running from root
+            cookie_file = os.path.join("backend", "cookies.txt")
+            
+        if os.path.exists(cookie_file):
+            print(f"Found cookie file at {cookie_file}, using it for authentication.")
+            self.ydl_opts['cookiefile'] = cookie_file
+        else:
+            # Check for cookies in environment variable (for production/Vercel)
+            cookies_content = os.getenv("YOUTUBE_COOKIES_CONTENT")
+            if cookies_content:
+                print("Found YOUTUBE_COOKIES_CONTENT env var, creating temp cookie file...")
+                import tempfile
+                # Create a temporary file to store cookies
+                # We use delete=False because yt-dlp needs to read it by path
+                # Ideally we should clean this up, but for serverless it's fine (ephemeral)
+                try:
+                    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as temp_cookie_file:
+                        temp_cookie_file.write(cookies_content)
+                        self.ydl_opts['cookiefile'] = temp_cookie_file.name
+                        print(f"Created temp cookie file at {temp_cookie_file.name}")
+                except Exception as e:
+                    print(f"Failed to create temp cookie file: {e}")
+            else:
+                # Check for browser cookies (Local development convenience)
+                browser_name = os.getenv("YOUTUBE_COOKIES_BROWSER")
+                if browser_name:
+                    print(f"YOUTUBE_COOKIES_BROWSER set to '{browser_name}', attempting to load cookies from browser...")
+                    # Tuple format: (browser, profile, container, keyring) - usually just browser is enough
+                    self.ydl_opts['cookiesfrombrowser'] = (browser_name,)
+                else:
+                    print("No cookies.txt, YOUTUBE_COOKIES_CONTENT, or YOUTUBE_COOKIES_BROWSER found.")
+                    print("If you encounter 'Sign in' errors, please configure one of these authentication methods.")
 
     def get_video_info(self, url: str) -> Dict[str, Any]:
         """
