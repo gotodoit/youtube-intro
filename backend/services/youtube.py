@@ -15,6 +15,8 @@ class YouTubeService:
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         }
         
+        self.cookie_file_path = None
+        
         # Check for cookies.txt in current directory or backend directory
         cookie_file = "cookies.txt"
         if not os.path.exists(cookie_file):
@@ -24,6 +26,7 @@ class YouTubeService:
         if os.path.exists(cookie_file):
             print(f"Found cookie file at {cookie_file}, using it for authentication.")
             self.ydl_opts['cookiefile'] = cookie_file
+            self.cookie_file_path = cookie_file
         else:
             # Check for cookies in environment variable (for production/Vercel)
             cookies_content = os.getenv("YOUTUBE_COOKIES_CONTENT")
@@ -37,6 +40,7 @@ class YouTubeService:
                     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as temp_cookie_file:
                         temp_cookie_file.write(cookies_content)
                         self.ydl_opts['cookiefile'] = temp_cookie_file.name
+                        self.cookie_file_path = temp_cookie_file.name
                         print(f"Created temp cookie file at {temp_cookie_file.name}")
                 except Exception as e:
                     print(f"Failed to create temp cookie file: {e}")
@@ -103,7 +107,13 @@ class YouTubeService:
             try:
                 # Use list_transcripts to get all available transcripts (manual and auto-generated)
                 print("Fetching transcript list...")
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                
+                # Pass cookies if available
+                if self.cookie_file_path:
+                    print(f"Using cookies from {self.cookie_file_path} for transcript API")
+                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, cookies=self.cookie_file_path)
+                else:
+                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
                 
                 transcript = None
                 
@@ -171,6 +181,12 @@ class YouTubeService:
             'outtmpl': temp_prefix, # yt-dlp will append .mp3
             'quiet': True,
         }
+        
+        # Propagate cookie settings
+        if self.cookie_file_path:
+             ydl_opts['cookiefile'] = self.cookie_file_path
+        elif 'cookiesfrombrowser' in self.ydl_opts:
+             ydl_opts['cookiesfrombrowser'] = self.ydl_opts['cookiesfrombrowser']
         
         downloaded_file = None
         
