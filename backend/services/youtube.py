@@ -37,7 +37,8 @@ class YouTubeService:
                 # We use delete=False because yt-dlp needs to read it by path
                 # Ideally we should clean this up, but for serverless it's fine (ephemeral)
                 try:
-                    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as temp_cookie_file:
+                    # Vercel only allows writing to /tmp
+                    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', dir='/tmp') as temp_cookie_file:
                         temp_cookie_file.write(cookies_content)
                         self.ydl_opts['cookiefile'] = temp_cookie_file.name
                         self.cookie_file_path = temp_cookie_file.name
@@ -169,7 +170,9 @@ class YouTubeService:
         
         # Unique prefix for temp file
         run_id = str(uuid.uuid4())
-        temp_prefix = f"temp_audio_{run_id}"
+        # Vercel only allows writing to /tmp
+        temp_dir = '/tmp' if os.path.exists('/tmp') else '.'
+        temp_prefix = os.path.join(temp_dir, f"temp_audio_{run_id}")
         
         ydl_opts = {
             'format': 'bestaudio/best',
