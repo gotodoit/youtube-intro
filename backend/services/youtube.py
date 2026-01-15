@@ -12,7 +12,8 @@ class YouTubeService:
             'skip_download': True, # We only need metadata and subtitles for now
             'quiet': True,
             'no_warnings': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            # Use Android client to try and bypass "Sign in to confirm you're not a bot"
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
         
         self.cookie_file_path = None
@@ -183,6 +184,7 @@ class YouTubeService:
             }],
             'outtmpl': temp_prefix, # yt-dlp will append .mp3
             'quiet': True,
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
         
         # Propagate cookie settings
