@@ -203,7 +203,11 @@ class YouTubeService:
                 raise Exception("Audio download failed: Output file not found.")
             
             downloaded_file = possible_files[0]
-            print(f"Audio downloaded to {downloaded_file}.")
+            file_size = os.path.getsize(downloaded_file)
+            print(f"Audio downloaded to {downloaded_file}. Size: {file_size} bytes")
+            
+            if file_size == 0:
+                raise Exception("Audio download failed: The downloaded file is empty.")
             
             # Check for API Key
             api_key = os.getenv("OPENAI_API_KEY")
